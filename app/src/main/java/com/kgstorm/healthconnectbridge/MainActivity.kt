@@ -5,13 +5,19 @@ import android.widget.Toast
 import androidx.activity.result.ActivityResultLauncher
 import androidx.appcompat.app.AppCompatActivity
 import androidx.lifecycle.lifecycleScope
+import androidx.work.ExistingPeriodicWorkPolicy
+import androidx.work.PeriodicWorkRequestBuilder
+import androidx.work.WorkManager
 import com.google.android.material.dialog.MaterialAlertDialogBuilder
 import com.kgstorm.healthconnectbridge.databinding.ActivityMainBinding
+import com.kgstorm.healthconnectbridge.sync.CalorieSyncService
+import com.kgstorm.healthconnectbridge.sync.CalorieSyncWorker
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
 import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
+import java.util.concurrent.TimeUnit
 
 /**
  * Main activity for the Health Connect Bridge app
@@ -22,6 +28,7 @@ class MainActivity : AppCompatActivity() {
     private lateinit var binding: ActivityMainBinding
     private lateinit var healthConnectManager: HealthConnectManager
     private lateinit var preferencesManager: PreferencesManager
+    private lateinit var syncService: CalorieSyncService
     private lateinit var requestPermissionLauncher: ActivityResultLauncher<Set<String>>
 
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -33,6 +40,7 @@ class MainActivity : AppCompatActivity() {
         // Initialize managers
         healthConnectManager = HealthConnectManager(this)
         preferencesManager = PreferencesManager(this)
+        syncService = CalorieSyncService(this)
 
         // Set up permission launcher
         requestPermissionLauncher = registerForActivityResult(
@@ -155,6 +163,9 @@ class MainActivity : AppCompatActivity() {
                     R.string.settings_saved,
                     Toast.LENGTH_SHORT
                 ).show()
+                
+                // Schedule periodic sync
+                schedulePeriodicSync()
             } catch (e: Exception) {
                 Toast.makeText(
                     this@MainActivity,
@@ -191,17 +202,48 @@ class MainActivity : AppCompatActivity() {
                 return@launch
             }
 
-            // TODO: Implement actual sync logic
-            // For now, just update the last sync time
-            Toast.makeText(
-                this@MainActivity,
-                "Sync functionality will be implemented in the next phase",
-                Toast.LENGTH_LONG
-            ).show()
+            // Disable sync button during sync
+            binding.syncNowButton.isEnabled = false
+            binding.syncNowButton.text = "Syncing..."
 
-            preferencesManager.saveLastSyncTime(System.currentTimeMillis())
-            updateLastSyncTime()
+            // Perform actual sync
+            val result = syncService.performSync()
+            
+            result.fold(
+                onSuccess = { message ->
+                    Toast.makeText(
+                        this@MainActivity,
+                        message,
+                        Toast.LENGTH_SHORT
+                    ).show()
+                    updateLastSyncTime()
+                },
+                onFailure = { e ->
+                    Toast.makeText(
+                        this@MainActivity,
+                        getString(R.string.sync_error, e.message ?: "Unknown error"),
+                        Toast.LENGTH_LONG
+                    ).show()
+                }
+            )
+
+            // Re-enable sync button
+            binding.syncNowButton.isEnabled = true
+            binding.syncNowButton.text = getString(R.string.sync_now)
         }
+    }
+
+    private fun schedulePeriodicSync() {
+        val syncWorkRequest = PeriodicWorkRequestBuilder<CalorieSyncWorker>(
+            repeatInterval = 15, // Minimum interval is 15 minutes
+            repeatIntervalTimeUnit = TimeUnit.MINUTES
+        ).build()
+
+        WorkManager.getInstance(this).enqueueUniquePeriodicWork(
+            CalorieSyncWorker.WORK_NAME,
+            ExistingPeriodicWorkPolicy.KEEP,
+            syncWorkRequest
+        )
     }
 
     private fun updateLastSyncTime() {
