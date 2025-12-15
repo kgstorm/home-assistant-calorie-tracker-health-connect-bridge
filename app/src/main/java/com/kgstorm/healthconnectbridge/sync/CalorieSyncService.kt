@@ -149,8 +149,8 @@ class CalorieSyncService(private val context: Context) {
                 } catch (e: Exception) {
                     // If timestamp update fails, log but still consider the sync successful
                     // since the data was written to Health Connect
-                    Log.e(TAG, "Warning: Failed to update timestamps after successful sync: ${e.message}", e)
-                    return@withContext Result.success("Synced $calories calories successfully (timestamp update failed)")
+                    Log.w(TAG, "Failed to update timestamps after successful sync: ${e.message}", e)
+                    return@withContext Result.success("Synced $calories calories successfully")
                 }
             } else {
                 val e = writeResult.exceptionOrNull()
