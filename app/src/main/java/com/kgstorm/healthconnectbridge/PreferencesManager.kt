@@ -24,6 +24,7 @@ class PreferencesManager(private val context: Context) {
         private val HA_TOKEN_KEY = stringPreferencesKey("ha_token")
         private val LAST_SYNC_KEY = longPreferencesKey("last_sync")
         private val USE_STUB_DATA_KEY = booleanPreferencesKey("use_stub_data")
+        private val LAST_SYNCED_TIMESTAMP_NUTRITION_KEY = longPreferencesKey("last_synced_timestamp_nutrition")
     }
 
     /**
@@ -88,6 +89,22 @@ class PreferencesManager(private val context: Context) {
      */
     val useStubData: Flow<Boolean> = context.dataStore.data.map { preferences ->
         preferences[USE_STUB_DATA_KEY] ?: false
+    }
+
+    /**
+     * Save last synced timestamp for nutrition records (in epoch milliseconds)
+     */
+    suspend fun saveLastSyncedTimestampNutrition(timestamp: Long) {
+        context.dataStore.edit { preferences ->
+            preferences[LAST_SYNCED_TIMESTAMP_NUTRITION_KEY] = timestamp
+        }
+    }
+
+    /**
+     * Get last synced timestamp for nutrition records
+     */
+    val lastSyncedTimestampNutrition: Flow<Long?> = context.dataStore.data.map { preferences ->
+        preferences[LAST_SYNCED_TIMESTAMP_NUTRITION_KEY]
     }
 
     /**

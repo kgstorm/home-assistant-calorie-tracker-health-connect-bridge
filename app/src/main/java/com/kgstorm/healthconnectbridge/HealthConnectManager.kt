@@ -55,6 +55,27 @@ class HealthConnectManager(private val context: Context) {
     }
 
     /**
+     * Check if nutrition records already exist for the given time range
+     * @param startTime Start of the time range
+     * @param endTime End of the time range
+     * @return true if any records exist in the time range, false otherwise
+     */
+    suspend fun hasNutritionRecordsInRange(
+        startTime: Instant,
+        endTime: Instant
+    ): Boolean = withContext(Dispatchers.IO) {
+        try {
+            val result = readNutritionRecords(startTime, endTime)
+            result.fold(
+                onSuccess = { records -> records.isNotEmpty() },
+                onFailure = { false }
+            )
+        } catch (e: Exception) {
+            false
+        }
+    }
+
+    /**
      * Write nutrition record to Health Connect
      * @param calories Total calories consumed
      * @param startTime Start time of the meal
