@@ -5,6 +5,7 @@ import android.util.Log
 import com.kgstorm.healthconnectbridge.HealthConnectManager
 import com.kgstorm.healthconnectbridge.PreferencesManager
 import com.kgstorm.healthconnectbridge.api.HomeAssistantClient
+import com.kgstorm.healthconnectbridge.stub.StubHomeAssistantApi
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.withContext
@@ -42,39 +43,56 @@ class CalorieSyncService(private val context: Context) {
                 return@withContext Result.failure(Exception("Health Connect permissions not granted"))
             }
             
-            // Get Home Assistant credentials
-            val haUrl = preferencesManager.homeAssistantUrl.first()
-            val haToken = preferencesManager.homeAssistantToken.first()
+            // Check if we should use stub data
+            val useStubData = preferencesManager.useStubData.first()
             
-            if (haUrl.isNullOrBlank() || haToken.isNullOrBlank()) {
-                return@withContext Result.failure(Exception("Home Assistant credentials not configured"))
+            val calories = if (useStubData) {
+                // Use stub data for testing
+                Log.d(TAG, "Using stub data for sync")
+                val stubApi = StubHomeAssistantApi()
+                val stubResponse = stubApi.getEntityState(CALORIE_ENTITY_ID)
+                
+                if (!stubResponse.isSuccessful || stubResponse.body() == null) {
+                    return@withContext Result.failure(Exception("Failed to get stub data"))
+                }
+                
+                val caloriesStr = stubResponse.body()!!.state
+                caloriesStr.toDoubleOrNull() ?: 0.0
+            } else {
+                // Use real Home Assistant API
+                val haUrl = preferencesManager.homeAssistantUrl.first()
+                val haToken = preferencesManager.homeAssistantToken.first()
+                
+                if (haUrl.isNullOrBlank() || haToken.isNullOrBlank()) {
+                    return@withContext Result.failure(Exception("Home Assistant credentials not configured"))
+                }
+                
+                // Create API service
+                val apiService = HomeAssistantClient.createService(haUrl, enableLogging = true)
+                val authHeader = "Bearer $haToken"
+                
+                // Fetch calorie data from Home Assistant
+                Log.d(TAG, "Fetching data from Home Assistant")
+                val response = apiService.getEntityState(CALORIE_ENTITY_ID, authHeader)
+                
+                if (!response.isSuccessful) {
+                    val errorMsg = "Failed to fetch data from Home Assistant: ${response.code()} ${response.message()}"
+                    Log.e(TAG, errorMsg)
+                    return@withContext Result.failure(Exception(errorMsg))
+                }
+                
+                val entityState = response.body()
+                if (entityState == null) {
+                    return@withContext Result.failure(Exception("Empty response from Home Assistant"))
+                }
+                
+                // Parse calorie value
+                val caloriesStr = entityState.state
+                caloriesStr.toDoubleOrNull() ?: 0.0
             }
             
-            // Create API service
-            val apiService = HomeAssistantClient.createService(haUrl, enableLogging = true)
-            val authHeader = "Bearer $haToken"
-            
-            // Fetch calorie data from Home Assistant
-            Log.d(TAG, "Fetching data from Home Assistant")
-            val response = apiService.getEntityState(CALORIE_ENTITY_ID, authHeader)
-            
-            if (!response.isSuccessful) {
-                val errorMsg = "Failed to fetch data from Home Assistant: ${response.code()} ${response.message()}"
-                Log.e(TAG, errorMsg)
-                return@withContext Result.failure(Exception(errorMsg))
-            }
-            
-            val entityState = response.body()
-            if (entityState == null) {
-                return@withContext Result.failure(Exception("Empty response from Home Assistant"))
-            }
-            
-            // Parse calorie value
-            val caloriesStr = entityState.state
-            val calories = caloriesStr.toDoubleOrNull()
-            
-            if (calories == null || calories <= 0) {
-                Log.d(TAG, "No valid calorie data to sync (value: $caloriesStr)")
+            if (calories <= 0) {
+                Log.d(TAG, "No valid calorie data to sync (value: $calories)")
                 return@withContext Result.success("No data to sync")
             }
             

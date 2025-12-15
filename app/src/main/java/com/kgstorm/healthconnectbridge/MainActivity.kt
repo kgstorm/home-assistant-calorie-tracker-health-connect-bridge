@@ -80,6 +80,11 @@ class MainActivity : AppCompatActivity() {
         binding.syncNowButton.setOnClickListener {
             performSync()
         }
+        
+        // Stub data checkbox
+        binding.useStubDataCheckbox.setOnCheckedChangeListener { _, isChecked ->
+            updateHaFieldsEnabled(!isChecked)
+        }
     }
 
     private fun checkHealthConnectAvailability() {
@@ -133,29 +138,44 @@ class MainActivity : AppCompatActivity() {
         lifecycleScope.launch {
             val url = preferencesManager.homeAssistantUrl.first()
             val token = preferencesManager.homeAssistantToken.first()
+            val useStubData = preferencesManager.useStubData.first()
             
             binding.haUrlInput.setText(url ?: "")
             binding.haTokenInput.setText(token ?: "")
+            binding.useStubDataCheckbox.isChecked = useStubData
+            
+            // Enable/disable HA fields based on stub mode
+            updateHaFieldsEnabled(!useStubData)
         }
+    }
+    
+    private fun updateHaFieldsEnabled(enabled: Boolean) {
+        binding.haUrlInput.isEnabled = enabled
+        binding.haTokenInput.isEnabled = enabled
     }
 
     private fun saveSettings() {
+        val useStubData = binding.useStubDataCheckbox.isChecked
         val url = binding.haUrlInput.text?.toString()?.trim() ?: ""
         val token = binding.haTokenInput.text?.toString()?.trim() ?: ""
 
-        if (url.isEmpty() || token.isEmpty()) {
-            Toast.makeText(this, "Please fill in all fields", Toast.LENGTH_SHORT).show()
-            return
-        }
+        // Validate based on stub mode
+        if (!useStubData) {
+            if (url.isEmpty() || token.isEmpty()) {
+                Toast.makeText(this, "Please fill in all fields or enable stub data mode", Toast.LENGTH_SHORT).show()
+                return
+            }
 
-        // Basic URL validation
-        if (!url.startsWith("http://") && !url.startsWith("https://")) {
-            Toast.makeText(this, "URL must start with http:// or https://", Toast.LENGTH_SHORT).show()
-            return
+            // Basic URL validation
+            if (!url.startsWith("http://") && !url.startsWith("https://")) {
+                Toast.makeText(this, "URL must start with http:// or https://", Toast.LENGTH_SHORT).show()
+                return
+            }
         }
 
         lifecycleScope.launch {
             try {
+                preferencesManager.saveUseStubData(useStubData)
                 preferencesManager.saveHomeAssistantUrl(url)
                 preferencesManager.saveHomeAssistantToken(token)
                 Toast.makeText(
@@ -179,13 +199,14 @@ class MainActivity : AppCompatActivity() {
     private fun performSync() {
         lifecycleScope.launch {
             // Check if settings are configured
+            val useStubData = preferencesManager.useStubData.first()
             val url = preferencesManager.homeAssistantUrl.first()
             val token = preferencesManager.homeAssistantToken.first()
 
-            if (url.isNullOrBlank() || token.isNullOrBlank()) {
+            if (!useStubData && (url.isNullOrBlank() || token.isNullOrBlank())) {
                 Toast.makeText(
                     this@MainActivity,
-                    "Please configure Home Assistant settings first",
+                    "Please configure Home Assistant settings or enable stub data mode first",
                     Toast.LENGTH_SHORT
                 ).show()
                 return@launch

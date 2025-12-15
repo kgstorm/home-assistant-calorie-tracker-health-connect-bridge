@@ -7,6 +7,7 @@ A bridge application that syncs calorie data from Home Assistant's calorie track
 - 🔄 Sync calorie intake data from Home Assistant to Health Connect
 - 🔐 Secure permission handling for Health Connect
 - ⚙️ Easy configuration with Home Assistant URL and access token
+- 🧪 **Stub data mode for testing without Home Assistant**
 - 🔁 Automatic periodic background sync
 - 📱 Clean Material Design 3 UI
 
@@ -14,8 +15,8 @@ A bridge application that syncs calorie data from Home Assistant's calorie track
 
 - Android 8.0 (API 26) or higher
 - Android Health Connect installed and configured
-- Home Assistant instance with calorie tracker sensor
-- Home Assistant long-lived access token
+- Home Assistant instance with calorie tracker sensor (optional with stub mode)
+- Home Assistant long-lived access token (optional with stub mode)
 
 ## Setup
 
@@ -44,6 +45,7 @@ cd home-assistant-calorie-tracker-health-connect-bridge
 
 ### 3. Install and Configure
 
+#### Option A: With Home Assistant (Production Use)
 1. Install the APK on your Android device
 2. Install Health Connect from Google Play Store if not already installed
 3. Open the app
@@ -52,6 +54,15 @@ cd home-assistant-calorie-tracker-health-connect-bridge
 6. Enter your long-lived access token
 7. Save settings
 8. Tap "Sync Now" to perform the first sync
+
+#### Option B: Stub Mode (Testing/Development)
+1. Install the APK on your Android device
+2. Install Health Connect from Google Play Store if not already installed
+3. Open the app
+4. Grant Health Connect permissions
+5. **Check "Use stub data for testing"**
+6. Save settings (no Home Assistant credentials needed)
+7. Tap "Sync Now" - the app will generate and write mock calorie data to Health Connect
 
 ## How It Works
 
@@ -126,13 +137,20 @@ Contributions are welcome! Please feel free to submit a Pull Request.
 - Install Health Connect from the Google Play Store
 
 ### Sync Fails
-- Verify your Home Assistant URL is correct and accessible
-- Check that your access token is valid
-- Ensure the `sensor.calorie_tracker` entity exists in your Home Assistant
+- **Using stub mode?** No setup required - just grant permissions and sync
+- **Using Home Assistant?**
+  - Verify your Home Assistant URL is correct and accessible
+  - Check that your access token is valid
+  - Ensure the `sensor.calorie_tracker` entity exists in your Home Assistant
 
 ### Permissions Denied
 - Go to Android Settings > Health Connect
 - Find this app and grant nutrition permissions
+
+### Testing Without Home Assistant
+- Enable "Use stub data for testing" in the app settings
+- This allows you to test the Health Connect integration without a Home Assistant instance
+- Stub mode generates realistic mock calorie data (1500-2500 kcal per sync)
 
 ## Support
 
