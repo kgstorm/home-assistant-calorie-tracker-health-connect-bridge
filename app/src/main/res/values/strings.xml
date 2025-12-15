@@ -14,6 +14,7 @@
     <string name="ha_url_hint">https://your-home-assistant.com</string>
     <string name="ha_token_label">Long-Lived Access Token</string>
     <string name="ha_token_hint">Your Home Assistant token</string>
+    <string name="use_stub_data">Use stub data for testing (no Home Assistant required)</string>
     <string name="save_settings">Save Settings</string>
     <string name="settings_saved">Settings saved successfully</string>
     <string name="settings_error">Error saving settings</string>
