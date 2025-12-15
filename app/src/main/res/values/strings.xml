@@ -1,0 +1,33 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">Health Connect Bridge</string>
+    
+    <!-- Permission related -->
+    <string name="permission_title">Health Connect Permissions</string>
+    <string name="permission_message">This app needs permission to read and write nutrition data to Health Connect to sync your calorie intake from Home Assistant.</string>
+    <string name="grant_permissions">Grant Permissions</string>
+    <string name="permissions_granted">Permissions Granted</string>
+    <string name="permissions_denied">Permissions Required</string>
+    
+    <!-- Home Assistant setup -->
+    <string name="ha_url_label">Home Assistant URL</string>
+    <string name="ha_url_hint">https://your-home-assistant.com</string>
+    <string name="ha_token_label">Long-Lived Access Token</string>
+    <string name="ha_token_hint">Your Home Assistant token</string>
+    <string name="save_settings">Save Settings</string>
+    <string name="settings_saved">Settings saved successfully</string>
+    <string name="settings_error">Error saving settings</string>
+    
+    <!-- Sync status -->
+    <string name="sync_status">Sync Status</string>
+    <string name="last_sync">Last Sync: %1$s</string>
+    <string name="never_synced">Never synced</string>
+    <string name="sync_now">Sync Now</string>
+    <string name="sync_success">Sync completed successfully</string>
+    <string name="sync_error">Sync failed: %1$s</string>
+    
+    <!-- General -->
+    <string name="ok">OK</string>
+    <string name="cancel">Cancel</string>
+    <string name="error">Error</string>
+</resources>
