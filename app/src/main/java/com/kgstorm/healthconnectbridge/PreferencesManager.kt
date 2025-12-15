@@ -75,12 +75,9 @@ class PreferencesManager(private val context: Context) {
      * Check if settings are configured
      */
     suspend fun areSettingsConfigured(): Boolean {
-        var isConfigured = false
-        context.dataStore.data.collect { preferences ->
-            val url = preferences[HA_URL_KEY]
-            val token = preferences[HA_TOKEN_KEY]
-            isConfigured = !url.isNullOrBlank() && !token.isNullOrBlank()
-        }
-        return isConfigured
+        val preferences = context.dataStore.data.first()
+        val url = preferences[HA_URL_KEY]
+        val token = preferences[HA_TOKEN_KEY]
+        return !url.isNullOrBlank() && !token.isNullOrBlank()
     }
 }

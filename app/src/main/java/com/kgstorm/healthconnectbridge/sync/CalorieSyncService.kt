@@ -89,7 +89,7 @@ class CalorieSyncService(private val context: Context) {
                 endTime = now
             )
             
-            writeResult.fold(
+            return@withContext writeResult.fold(
                 onSuccess = {
                     Log.d(TAG, "Successfully synced $calories calories")
                     preferencesManager.saveLastSyncTime(System.currentTimeMillis())
