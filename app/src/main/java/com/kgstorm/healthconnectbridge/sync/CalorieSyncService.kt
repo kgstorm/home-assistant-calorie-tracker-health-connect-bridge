@@ -96,10 +96,37 @@ class CalorieSyncService(private val context: Context) {
                 return@withContext Result.success("No data to sync")
             }
             
-            // Write to Health Connect
-            Log.d(TAG, "Writing $calories calories to Health Connect")
+            // Calculate time range for this sync
             val now = Instant.now()
             val startTime = now.minus(1, ChronoUnit.MINUTES) // 1 minute ago
+            
+            // Check for idempotency: get last synced timestamp and check for overlapping records
+            val lastSyncedTimestamp = preferencesManager.lastSyncedTimestampNutrition.first()
+            
+            if (lastSyncedTimestamp != null) {
+                val lastSyncedInstant = Instant.ofEpochMilli(lastSyncedTimestamp)
+                
+                // Check if current sync time range overlaps with the last synced timestamp
+                // If the startTime of current sync is before or equal to the last synced time,
+                // we need to check if records already exist in this range
+                if (startTime.isBefore(lastSyncedInstant) || startTime == lastSyncedInstant) {
+                    Log.d(TAG, "Checking for existing records to avoid duplicates (last synced: $lastSyncedInstant)")
+                    
+                    // Check if records already exist in the overlapping time range
+                    val hasExistingRecords = healthConnectManager.hasNutritionRecordsInRange(
+                        startTime = startTime,
+                        endTime = now
+                    )
+                    
+                    if (hasExistingRecords) {
+                        Log.d(TAG, "Records already exist for time range [$startTime, $now]. Skipping write to avoid duplicates.")
+                        return@withContext Result.success("Sync skipped - data already exists for this time range")
+                    }
+                }
+            }
+            
+            // Write to Health Connect
+            Log.d(TAG, "Writing $calories calories to Health Connect")
             
             val writeResult = healthConnectManager.writeNutritionRecord(
                 calories = calories,
@@ -110,7 +137,10 @@ class CalorieSyncService(private val context: Context) {
             return@withContext writeResult.fold(
                 onSuccess = {
                     Log.d(TAG, "Successfully synced $calories calories")
-                    preferencesManager.saveLastSyncTime(System.currentTimeMillis())
+                    val currentTimeMillis = System.currentTimeMillis()
+                    preferencesManager.saveLastSyncTime(currentTimeMillis)
+                    // Save the end time of this sync as the last synced timestamp for nutrition records
+                    preferencesManager.saveLastSyncedTimestampNutrition(now.toEpochMilli())
                     Result.success("Synced $calories calories successfully")
                 },
                 onFailure = { e ->
