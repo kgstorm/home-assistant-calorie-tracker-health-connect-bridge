@@ -134,21 +134,30 @@ class CalorieSyncService(private val context: Context) {
                 endTime = now
             )
             
-            return@withContext writeResult.fold(
-                onSuccess = {
-                    Log.d(TAG, "Successfully synced $calories calories")
+            // Only update timestamps after successful write to Health Connect
+            if (writeResult.isSuccess) {
+                Log.d(TAG, "Successfully synced $calories calories")
+                
+                // Update timestamps - these must complete before we return success
+                try {
                     val currentTimeMillis = System.currentTimeMillis()
                     preferencesManager.saveLastSyncTime(currentTimeMillis)
                     // Save the end time of this sync as the last synced timestamp for nutrition records
                     preferencesManager.saveLastSyncedTimestampNutrition(now.toEpochMilli())
-                    Result.success("Synced $calories calories successfully")
-                },
-                onFailure = { e ->
-                    val errorMsg = "Failed to write to Health Connect: ${e.message}"
-                    Log.e(TAG, errorMsg, e)
-                    Result.failure(Exception(errorMsg, e))
+                    
+                    return@withContext Result.success("Synced $calories calories successfully")
+                } catch (e: Exception) {
+                    // If timestamp update fails, log but still consider the sync successful
+                    // since the data was written to Health Connect
+                    Log.e(TAG, "Warning: Failed to update timestamps after successful sync: ${e.message}", e)
+                    return@withContext Result.success("Synced $calories calories successfully (timestamp update failed)")
                 }
-            )
+            } else {
+                val e = writeResult.exceptionOrNull()
+                val errorMsg = "Failed to write to Health Connect: ${e?.message}"
+                Log.e(TAG, errorMsg, e)
+                return@withContext Result.failure(Exception(errorMsg, e))
+            }
         } catch (e: Exception) {
             val errorMsg = "Sync failed: ${e.message}"
             Log.e(TAG, errorMsg, e)
