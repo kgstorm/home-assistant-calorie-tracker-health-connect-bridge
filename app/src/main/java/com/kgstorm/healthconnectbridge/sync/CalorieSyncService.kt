@@ -161,7 +161,7 @@ class CalorieSyncService(private val context: Context) {
         } catch (e: Exception) {
             val errorMsg = "Sync failed: ${e.message}"
             Log.e(TAG, errorMsg, e)
-            Result.failure(Exception(errorMsg, e))
+            return@withContext Result.failure(Exception(errorMsg, e))
         }
     }
     
